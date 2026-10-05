@@ -3,16 +3,16 @@
 
 MonopolyBoard::MonopolyBoard() {
 
-    board.add("Mediterranean Avenue", 60);
-    board.add("Baltic Avenue", 60);
-    board.add("Oriental Avenue", 100);
-    board.add("Vermont Avenue", 100);
-    board.add("Connecticut Avenue", 120);
-    board.add("St. Charles Place", 140);
-    board.add("States Avenue", 140);
-    board.add("Virginia Avenue", 160);
-    board.add("Tennessee Avenue", 180);
-    board.add("Boardwalk", 400);
+    board.add("Plant Island", 60);
+    board.add("Cold Island", 60);
+    board.add("Air Island", 100);
+    board.add("Water Island", 100);
+    board.add("Earth Island", 120);
+    board.add("Eathereal Workshop", 140);
+    board.add("Plasma Islet", 140);
+    board.add("Crystal Islet", 160);
+    board.add("Mirror Plant Island", 180);
+    board.add("Magical Sanctum", 400);
 
     board.makeCircular();
 }
