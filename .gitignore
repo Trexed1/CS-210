@@ -67,3 +67,7 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Local Assignment05 materials and build output
+/SubmissionMaterials/
+/Assignment05/assignment05
