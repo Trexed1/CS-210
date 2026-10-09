@@ -2,68 +2,78 @@
 
 Tyler Rex | CS 210 | C++17
 
-## What to run
+## Build and run in VS Code
 
-From `Assignment05/` in the VS Code terminal:
+Open the VS Code terminal in `Assignment05/`, then run:
 
 ```bash
-clang++ -std=c++17 -Wall -Wextra main.cpp -o assignment05
+clang++ -std=c++17 -Wall -Wextra main.cpp Stack.cpp Queue.cpp Deque.cpp -o assignment05
 ./assignment05
 ```
 
-The first command builds the program. The second command prints every attempted operation and its checked result. The captured run is in `actual_output.txt`. The final line of that run is `TOTAL: 101 operations; 0 failures`. The executable `assignment05` is a local build product; the source file is `main.cpp`.
+All four `.cpp` files are needed. The first command builds one program named `assignment05`. The second runs it. The actual captured run is in `actual_output.txt` and ends with `TOTAL: 101 operations; 0 failures`.
 
-## Common interface and error handling
+## File layout
 
-All six structures store `int` values. Insertion functions return `true` when they succeed. The three fixed-capacity array structures return `false` if they are full, without changing their contents. The linked structures have no fixed capacity; allocation failure would be reported by C++ as an exception. Removal functions take `int& value` as an output parameter and return `true` if they removed an item. On an empty structure they return `false` without changing `value`. `isEmpty()` and `size()` let the caller inspect state in constant time.
+- `Assignment05.h` declares the five functions that are shared between files. A declaration tells the compiler a function exists; its body is in a `.cpp` file. The `#ifndef`, `#define`, and `#endif` lines keep the header from being included twice in the same compilation unit.
+- `Stack.cpp` defines `ArrayStack` and `LinkedStack`, then demonstrates both in `testStacks`.
+- `Queue.cpp` defines `ArrayQueue` and `LinkedQueue`, then demonstrates both in `testQueues`.
+- `Deque.cpp` defines `ArrayDeque` and `LinkedDeque`, then demonstrates both in `testDeques`.
+- `main.cpp` defines the small result-checking functions and calls the three demonstration functions.
 
-The array capacity is five so the demonstration can show a full structure without a long test. This is a fixed size, not a resizeable array. `count` is the number of live items. Every array insertion checks `count == CAPACITY` before writing, so there is no out-of-bounds write.
+There are no templates, `auto` variables, or lambdas. The repeated test calls are intentional: each step says exactly which operation is being tested and what result is expected.
 
-## ArrayStack
+## How results are reported
 
-`data[5]` holds items from bottom to top, and `count` is also the index of the next free slot. `push` writes at `data[count]` and then increments `count`. `pop` first checks for empty, then decrements `count` and reads `data[count]`. The most recently pushed value is therefore the first removed: last in, first out (LIFO). A rejected push or pop leaves the state unchanged.
+Every insertion returns a `bool`: `true` means the value was added, and `false` means a fixed array was already full. Every removal returns a `bool` and has an `int& value` parameter. The `&` means the function can place the removed number into the caller's variable. If the structure is empty, removal returns `false` without changing `value`. The test sets `value` to `-1` before an expected empty removal to check that rule.
 
-## LinkedStack
+`checkInsert` compares the actual and expected `bool` values. `checkRemove` also compares the returned number (or checks that `-1` stayed unchanged when empty). Each prints `PASS` or `FAIL` and increases the operation count. `main` prints the total and returns 0 if every check passed, or 1 if any failed. This exit code makes a failed test visible to the terminal.
 
-Each private `Node` stores a value and a pointer to the next node. `head` always points at the top. `push` creates a node whose `next` is the old head, then makes that node the new head. `pop` saves the old head's value, advances `head`, deletes the old node, and decrements `count`. This also gives LIFO order without traversal. The destructor walks the remaining nodes and deletes each one. Copy construction and assignment are disabled so an accidental shallow pointer copy cannot cause two objects to delete the same nodes.
+## Stack.cpp
 
-## ArrayQueue
+A stack removes the most recently inserted item first. This is last in, first out (LIFO).
 
-The queue is a circular array. `front` is the index of the oldest item; `count` says how many items exist. `enqueue` writes at `(front + count) % CAPACITY`, which is the next available position after the last item. `dequeue` reads `data[front]`, then advances `front` with `(front + 1) % CAPACITY`. The modulo operation wraps an index from the end of the array to zero. This avoids shifting elements. The oldest item leaves first: first in, first out (FIFO). The test removes 10 and 20, then inserts 60 and 70 into slots that became free, checking wraparound and FIFO order.
+`ArrayStack` has `data[5]` and `count`. `count` tells how many array positions are occupied. `push` first checks whether `count` is 5, then writes at `data[count]` and increases `count`. `pop` first checks whether `count` is 0, then decreases `count` and reads that position. Decreasing before reading returns the top value.
 
-## LinkedQueue
+`LinkedStack` uses a `Node` with `value` and `next`. `head` points to the top node. `push` allocates a new node, points it to the old head, and makes it the new head. `pop` saves the head value, moves `head` to the next node, deletes the old node, and decreases `count`. The destructor deletes any nodes left when the object goes out of scope.
 
-Each node has a value and `next`. `head` is the oldest item and `tail` is the newest. `enqueue` attaches a new node after `tail`; when empty, it sets both `head` and `tail` to the new node. `dequeue` removes `head`. If that was the last node, it also sets `tail` to `nullptr`. Maintaining both pointers makes insertion and removal constant time. The destructor deletes any nodes still present. Copying is disabled for the same ownership reason as `LinkedStack`.
+`testStacks` tries an empty pop, mixes pushes and pops, checks LIFO order, fills the array stack and rejects one extra push, drains both stacks, and tries another empty pop. Each stack has at least 16 operations.
 
-## ArrayDeque
+## Queue.cpp
 
-A deque allows insertion and removal at both ends. This circular array also uses `front` and `count`. `pushFront` moves `front` backward with `(front + CAPACITY - 1) % CAPACITY` before writing. Adding `CAPACITY` keeps the intermediate value nonnegative. `pushBack` writes at `(front + count) % CAPACITY`. `popFront` reads `front` and moves it forward. `popBack` reads `(front + count - 1) % CAPACITY` and decreases `count`; it does not need to move `front`. Every operation checks for full or empty before changing an index. When the last item is removed, `front` may be any valid index, because the next insertion computes its position from that index and `count == 0`.
+A queue removes the oldest item first. This is first in, first out (FIFO).
 
-## LinkedDeque
+`ArrayQueue` has `data[5]`, `front`, and `count`. `front` is the array index of the oldest item. `enqueue` calculates the next open index as `(front + count) % 5`, writes there, and increases `count`. `dequeue` reads `data[front]`, moves `front` to `(front + 1) % 5`, and decreases `count`. `%` is the remainder operator; it wraps an index back to 0 after 4. This avoids moving all the other values.
 
-Each private node has `previous` and `next` pointers. `head` is the front and `tail` is the back. `pushFront` links a new node before `head`; `pushBack` links one after `tail`. `popFront` moves `head` forward; `popBack` moves `tail` backward. For a one-node deque, removing from either end sets both pointers to `nullptr`. For a larger deque, the new end node's outward pointer is set to `nullptr`, preventing a dangling link. The destructor deletes remaining nodes by following `next`, and copying is disabled to preserve unique ownership.
+`LinkedQueue` uses singly linked nodes plus `head` and `tail`. `head` is the oldest item; `tail` is the newest. `enqueue` links a new node after `tail`. When the queue was empty, it sets both pointers to the new node. `dequeue` removes `head`; if that was the last node, it also sets `tail` to `nullptr`. The destructor deletes remaining nodes.
 
-## Test driver
+`testQueues` checks empty handling, five insertions, array overflow, FIFO removals, and circular wraparound: after removing 10 and 20, it adds 60 and 70 into reusable array positions. Each queue has at least 16 operations.
 
-`checkInsert` compares an insertion's actual Boolean result with the expected result and prints `PASS` or `FAIL`. `checkRemove` also compares a removed value when removal succeeds and verifies that a failed removal leaves the output value unchanged. The `testStack`, `testQueue`, and `testDeque` function templates run the same core sequence against each representation. This makes it easy to see whether array and linked versions obey the same rules. The `bounded` argument adds full-capacity tests for array versions. Local lambdas perform removals before passing the output value to `checkRemove`, avoiding any ambiguity about function-argument evaluation order.
+## Deque.cpp
 
-Each test begins with removal from an empty structure, performs at least sixteen attempted insertions/removals, drains the structure, and checks another empty removal. It then checks `isEmpty()` and `size()`. The stack test checks LIFO order. The queue test checks FIFO order and circular wraparound. The deque test mixes front and back operations, including circular wraparound for the array version. `main` creates one object of each class, runs all six tests, prints the operation and failure totals, and exits with status 0 only if every check passes.
+A deque (double-ended queue) permits insertion and removal at both the front and the back.
+
+`ArrayDeque` uses `data[5]`, `front`, and `count`. `pushFront` moves `front` one position backward with `(front + 5 - 1) % 5`, then writes. Adding 5 prevents a negative index before `%`. `pushBack` writes at `(front + count) % 5`. `popFront` reads `front` and moves it forward. `popBack` reads `(front + count - 1) % 5` and decreases `count`. Each checks full or empty first. When the last item is removed, the next insertion still works because `count` is 0.
+
+`LinkedDeque` uses nodes with `previous` and `next` pointers. `head` is the front and `tail` is the back. `pushFront` and `pushBack` attach a new node at the chosen end. `popFront` and `popBack` detach and delete the node at the chosen end. When the last node is removed, both `head` and `tail` become `nullptr`. When nodes remain, the new end's outward pointer becomes `nullptr`. The destructor deletes nodes left in the deque.
+
+`testDeques` mixes operations at both ends, checks empty removals, wraps the array indices, and checks array overflow. Each deque has at least 16 operations.
 
 ## Complexity
 
 Let `n` be the number of stored items and `C = 5` the array capacity.
 
-| Structure | Insertion | Removal | `isEmpty`, `size` | Space |
-| --- | --- | --- | --- | --- |
-| Array stack | O(1) | O(1) | O(1) | O(C) |
-| Linked stack | O(1) | O(1) | O(1) | O(n) |
-| Array queue | O(1) | O(1) | O(1) | O(C) |
-| Linked queue | O(1) | O(1) | O(1) | O(n) |
-| Array deque | O(1) at either end | O(1) at either end | O(1) | O(C) |
-| Linked deque | O(1) at either end | O(1) at either end | O(1) | O(n) |
+- Array stack: `push`, `pop`, `isEmpty`, and `size` are O(1). Space is O(C).
+- Linked stack: `push`, `pop`, `isEmpty`, and `size` are O(1). Space is O(n).
+- Array queue: `enqueue`, `dequeue`, `isEmpty`, and `size` are O(1). Space is O(C).
+- Linked queue: `enqueue`, `dequeue`, `isEmpty`, and `size` are O(1). Space is O(n).
+- Array deque: all four end operations, `isEmpty`, and `size` are O(1). Space is O(C).
+- Linked deque: all four end operations, `isEmpty`, and `size` are O(1). Space is O(n).
 
-The array operations do not become O(n) in this fixed-capacity design: a full insertion simply returns `false`. A resizeable array could require O(n) for one insertion when it grows and copies items, but this code does not resize. A queue or deque that shifts array elements on removal could also take O(n); the circular indices avoid that. A singly linked deque without a `previous` pointer would need O(n) to find the node before the tail for `popBack`; the doubly linked design avoids it. Destroying a linked structure with `n` remaining nodes is O(n). Printing or otherwise visiting all `n` stored elements would also be O(n), although the test driver only prints each attempted operation.
+The fixed array operations never become O(n): when full, insertion returns `false` instead of resizing. If we chose a growing array, one insertion could take O(n) to copy items. A queue that shifted array elements after every removal could take O(n), but the circular array avoids shifting. A singly linked deque could take O(n) to find the node before its tail, but the doubly linked deque has a `previous` pointer. Deleting `n` leftover linked nodes in a destructor is O(n).
 
-## Compiler messages and fixes
+## Compiler errors and fixes
 
-The requested build completed without compiler errors or warnings. If a future edit causes `use of undeclared identifier`, check spelling and whether the variable is in scope. If it causes `no member named ...`, compare the call with the class's public method name. If it causes `expected ';'`, check the end of the preceding declaration. If a linked-list edit causes a crash after removal, inspect the empty and one-node cases and make sure removed nodes are deleted only once. Rebuild with the exact command above after a fix; `-Wall -Wextra` makes common mistakes visible.
+The requested build completed without errors or warnings. If you compile only `main.cpp`, the linker will report missing definitions for `testStacks`, `testQueues`, and `testDeques`; adding all three implementation files to the compile command fixes that. If you accidentally `#include` a `.cpp` file and also compile it separately, you can get duplicate-definition errors; include only `Assignment05.h`. A message such as `no member named 'push'` usually means a method name was mistyped. A message such as `expected ';'` usually points to a missing semicolon near the previous declaration. After any change, rebuild with the command at the top of this guide.
+
+The linked classes are used as separate objects and are not copied in this program. Copying one with C++'s default copy behavior would copy its pointers, which would be unsafe for owning linked nodes. Avoid copying these objects unless you later implement a proper copy constructor and assignment operator.

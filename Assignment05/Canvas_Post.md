@@ -6,85 +6,122 @@ Tyler Rex | CS 210 | C++17
 
 **GitHub repository:** https://github.com/Trexed1/CS-210
 
-**Submitted version:** tag [`assignment05-submission`](https://github.com/Trexed1/CS-210/tree/assignment05-submission/Assignment05)
+**Submitted version:** tag [`assignment05-submission-v2`](https://github.com/Trexed1/CS-210/tree/assignment05-submission-v2/Assignment05)
 
 ## Design
 
-I implemented all six structures with `int` values. The array stack has a fixed five-element array and a count. The linked stack uses a singly linked list with its top at the head. The array queue and deque use circular arrays, so removing from the front does not shift elements. The linked queue keeps both head and tail pointers. The linked deque uses previous and next pointers so either end can be changed directly.
+I put the two stack implementations in `Stack.cpp`, the two queues in `Queue.cpp`, and the two deques in `Deque.cpp`. `main.cpp` only checks and prints results and calls the three demonstration functions. `Assignment05.h` contains the shared function declarations. I used regular classes, functions, arrays, and my own linked nodes; there are no templates or `auto` variables.
 
-Insertion returns `false` when a fixed array is full. Removal returns `false` when a structure is empty, leaving its output parameter unchanged. The linked classes delete their remaining nodes in destructors and disable copying to avoid shallow pointer copies.
+The array stack has a five-element array and a count. The linked stack adds and removes at its head. The array queue and deque use circular arrays so values do not shift. The linked queue keeps head and tail pointers, and the linked deque uses previous and next pointers to change either end.
+
+Insertion returns `false` when a fixed array is full. Removal returns `false` when empty and leaves the output value unchanged. The linked classes delete remaining nodes in their destructors.
 
 ## Tests and results
 
-I compiled with `clang++ -std=c++17 -Wall -Wextra main.cpp -o assignment05` and ran `./assignment05`. The program performs 101 checked operations across the six structures, with at least 16 per structure. These include empty removals, full-array insertion attempts, LIFO and FIFO order, circular wraparound, and both deque ends. The actual run ended with `TOTAL: 101 operations; 0 failures`. A sanitizer build also completed without errors. The attached PDF contains the full captured output.
+I compiled with `clang++ -std=c++17 -Wall -Wextra main.cpp Stack.cpp Queue.cpp Deque.cpp -o assignment05` and ran `./assignment05`. The program performs 101 checked operations across the six structures, with at least 16 per structure. The checks cover empty removals, full-array insertions, LIFO and FIFO order, circular wraparound, and both deque ends. The actual run ended with `TOTAL: 101 operations; 0 failures`. A sanitizer build also finished without errors. The PDF contains the full output.
 
 ## Complexity
 
-Every insertion and removal shown here is O(1), as are `isEmpty()` and `size()`. The fixed arrays use O(C) space, where C = 5. Linked versions use O(n) space for n items. Destroying n remaining linked nodes takes O(n). A growable array could take O(n) during a resize, an array queue that shifts items could take O(n) per removal, and a singly linked deque would take O(n) to remove its back node. The fixed-capacity, circular-array, and doubly linked choices avoid those costs in the implemented operations.
+Every insertion and removal in these designs is O(1), as are `isEmpty()` and `size()`. Fixed arrays use O(C) space, where C = 5; linked versions use O(n) space for n items. Deleting n leftover linked nodes is O(n). A growing array could take O(n) when it copies values, an array queue that shifts items could take O(n) per removal, and a singly linked deque could take O(n) to remove from the back. Circular indexing and previous pointers avoid those costs here.
 
-## Complete source code (`Assignment05/main.cpp`)
+## Complete source code
+
+### Assignment05.h
 
 ```cpp
-#include <iostream>
+#ifndef ASSIGNMENT05_H
+#define ASSIGNMENT05_H
+
 #include <string>
 
 using namespace std;
 
-// Array structures have a fixed capacity. A failed insertion changes nothing.
+// These functions print one operation and compare it with the expected result.
+void checkInsert(string action, bool actual, bool expected,
+                 int& steps, int& failures);
+void checkRemove(string action, bool actual, int value,
+                 bool expected, int expectedValue, int& steps, int& failures);
+
+// Each function demonstrates the array and linked versions of one ADT.
+void testStacks(int& totalSteps, int& failures);
+void testQueues(int& totalSteps, int& failures);
+void testDeques(int& totalSteps, int& failures);
+
+#endif
+```
+
+### Stack.cpp
+
+```cpp
+#include "Assignment05.h"
+#include <iostream>
+
+using namespace std;
+
+const int STACK_CAPACITY = 5;
+
 class ArrayStack {
 private:
-    static const int CAPACITY = 5;
-    int data[CAPACITY];
+    int data[STACK_CAPACITY];
     int count;
 
 public:
-    ArrayStack() : count(0) {}
+    ArrayStack() { count = 0; }
 
     bool push(int value) {
-        if (count == CAPACITY) return false;
-        data[count++] = value;
+        if (count == STACK_CAPACITY) return false;
+        data[count] = value;
+        count++;
         return true;
     }
 
     bool pop(int& value) {
-        if (isEmpty()) return false;
-        value = data[--count];
+        if (count == 0) return false;
+        count--;
+        value = data[count];
         return true;
     }
 
-    bool isEmpty() const { return count == 0; }
-    int size() const { return count; }
+    bool isEmpty() { return count == 0; }
+    int size() { return count; }
 };
 
 class LinkedStack {
 private:
-    struct Node { int value; Node* next; };
+    struct Node {
+        int value;
+        Node* next;
+    };
     Node* head;
     int count;
 
 public:
-    LinkedStack() : head(nullptr), count(0) {}
-    LinkedStack(const LinkedStack&) = delete;
-    LinkedStack& operator=(const LinkedStack&) = delete;
+    LinkedStack() {
+        head = nullptr;
+        count = 0;
+    }
 
     bool push(int value) {
-        head = new Node{value, head};
-        ++count;
+        Node* node = new Node;
+        node->value = value;
+        node->next = head;
+        head = node;
+        count++;
         return true;
     }
 
     bool pop(int& value) {
-        if (isEmpty()) return false;
+        if (head == nullptr) return false;
         Node* old = head;
         value = old->value;
-        head = old->next;
+        head = head->next;
         delete old;
-        --count;
+        count--;
         return true;
     }
 
-    bool isEmpty() const { return head == nullptr; }
-    int size() const { return count; }
+    bool isEmpty() { return head == nullptr; }
+    int size() { return count; }
 
     ~LinkedStack() {
         while (head != nullptr) {
@@ -95,69 +132,180 @@ public:
     }
 };
 
+void testStacks(int& totalSteps, int& failures) {
+    int steps = 0;
+    int value;
+    bool success;
+
+    cout << "\nARRAY STACK" << endl;
+    ArrayStack arrayStack;
+    value = -1; // Failed removal must not change this value.
+    success = arrayStack.pop(value);
+    checkRemove("pop", success, value, false, -1, steps, failures);
+    success = arrayStack.push(10);
+    checkInsert("push 10", success, true, steps, failures);
+    success = arrayStack.push(20);
+    checkInsert("push 20", success, true, steps, failures);
+    success = arrayStack.push(30);
+    checkInsert("push 30", success, true, steps, failures);
+    success = arrayStack.pop(value);
+    checkRemove("pop", success, value, true, 30, steps, failures);
+    success = arrayStack.push(40);
+    checkInsert("push 40", success, true, steps, failures);
+    success = arrayStack.push(50);
+    checkInsert("push 50", success, true, steps, failures);
+    success = arrayStack.push(60);
+    checkInsert("push 60", success, true, steps, failures);
+    success = arrayStack.push(99);
+    checkInsert("push 99 while full", success, false, steps, failures);
+    success = arrayStack.pop(value);
+    checkRemove("pop", success, value, true, 60, steps, failures);
+    success = arrayStack.pop(value);
+    checkRemove("pop", success, value, true, 50, steps, failures);
+    success = arrayStack.push(70);
+    checkInsert("push 70", success, true, steps, failures);
+    success = arrayStack.pop(value);
+    checkRemove("pop", success, value, true, 70, steps, failures);
+    success = arrayStack.pop(value);
+    checkRemove("pop", success, value, true, 40, steps, failures);
+    success = arrayStack.pop(value);
+    checkRemove("pop", success, value, true, 20, steps, failures);
+    success = arrayStack.pop(value);
+    checkRemove("pop", success, value, true, 10, steps, failures);
+    value = -1; // Failed removal must not change this value.
+    success = arrayStack.pop(value);
+    checkRemove("pop", success, value, false, -1, steps, failures);
+    if (!arrayStack.isEmpty() || arrayStack.size() != 0) failures++;
+    cout << "Operations: " << steps << "; final size: " << arrayStack.size() << endl;
+    totalSteps += steps;
+
+    cout << "\nLINKED STACK" << endl;
+    LinkedStack linkedStack;
+    steps = 0;
+    value = -1; // Failed removal must not change this value.
+    success = linkedStack.pop(value);
+    checkRemove("pop", success, value, false, -1, steps, failures);
+    success = linkedStack.push(10);
+    checkInsert("push 10", success, true, steps, failures);
+    success = linkedStack.push(20);
+    checkInsert("push 20", success, true, steps, failures);
+    success = linkedStack.push(30);
+    checkInsert("push 30", success, true, steps, failures);
+    success = linkedStack.pop(value);
+    checkRemove("pop", success, value, true, 30, steps, failures);
+    success = linkedStack.push(40);
+    checkInsert("push 40", success, true, steps, failures);
+    success = linkedStack.push(50);
+    checkInsert("push 50", success, true, steps, failures);
+    success = linkedStack.push(60);
+    checkInsert("push 60", success, true, steps, failures);
+    success = linkedStack.pop(value);
+    checkRemove("pop", success, value, true, 60, steps, failures);
+    success = linkedStack.pop(value);
+    checkRemove("pop", success, value, true, 50, steps, failures);
+    success = linkedStack.push(70);
+    checkInsert("push 70", success, true, steps, failures);
+    success = linkedStack.pop(value);
+    checkRemove("pop", success, value, true, 70, steps, failures);
+    success = linkedStack.pop(value);
+    checkRemove("pop", success, value, true, 40, steps, failures);
+    success = linkedStack.pop(value);
+    checkRemove("pop", success, value, true, 20, steps, failures);
+    success = linkedStack.pop(value);
+    checkRemove("pop", success, value, true, 10, steps, failures);
+    value = -1; // Failed removal must not change this value.
+    success = linkedStack.pop(value);
+    checkRemove("pop", success, value, false, -1, steps, failures);
+    if (!linkedStack.isEmpty() || linkedStack.size() != 0) failures++;
+    cout << "Operations: " << steps << "; final size: " << linkedStack.size() << endl;
+    totalSteps += steps;
+}
+```
+
+### Queue.cpp
+
+```cpp
+#include "Assignment05.h"
+#include <iostream>
+
+using namespace std;
+
+const int QUEUE_CAPACITY = 5;
+
 class ArrayQueue {
 private:
-    static const int CAPACITY = 5;
-    int data[CAPACITY];
+    int data[QUEUE_CAPACITY];
     int front;
     int count;
 
 public:
-    ArrayQueue() : front(0), count(0) {}
+    ArrayQueue() {
+        front = 0;
+        count = 0;
+    }
 
     bool enqueue(int value) {
-        if (count == CAPACITY) return false;
-        data[(front + count) % CAPACITY] = value;
-        ++count;
+        if (count == QUEUE_CAPACITY) return false;
+        int back = (front + count) % QUEUE_CAPACITY;
+        data[back] = value;
+        count++;
         return true;
     }
 
     bool dequeue(int& value) {
-        if (isEmpty()) return false;
+        if (count == 0) return false;
         value = data[front];
-        front = (front + 1) % CAPACITY;
-        --count;
+        front = (front + 1) % QUEUE_CAPACITY;
+        count--;
         return true;
     }
 
-    bool isEmpty() const { return count == 0; }
-    int size() const { return count; }
+    bool isEmpty() { return count == 0; }
+    int size() { return count; }
 };
 
 class LinkedQueue {
 private:
-    struct Node { int value; Node* next; };
+    struct Node {
+        int value;
+        Node* next;
+    };
     Node* head;
     Node* tail;
     int count;
 
 public:
-    LinkedQueue() : head(nullptr), tail(nullptr), count(0) {}
-    LinkedQueue(const LinkedQueue&) = delete;
-    LinkedQueue& operator=(const LinkedQueue&) = delete;
+    LinkedQueue() {
+        head = nullptr;
+        tail = nullptr;
+        count = 0;
+    }
 
     bool enqueue(int value) {
-        Node* node = new Node{value, nullptr};
+        Node* node = new Node;
+        node->value = value;
+        node->next = nullptr;
+
         if (tail == nullptr) head = node;
         else tail->next = node;
         tail = node;
-        ++count;
+        count++;
         return true;
     }
 
     bool dequeue(int& value) {
-        if (isEmpty()) return false;
+        if (head == nullptr) return false;
         Node* old = head;
         value = old->value;
-        head = old->next;
+        head = head->next;
         if (head == nullptr) tail = nullptr;
         delete old;
-        --count;
+        count--;
         return true;
     }
 
-    bool isEmpty() const { return head == nullptr; }
-    int size() const { return count; }
+    bool isEmpty() { return head == nullptr; }
+    int size() { return count; }
 
     ~LinkedQueue() {
         while (head != nullptr) {
@@ -168,106 +316,222 @@ public:
     }
 };
 
+void testQueues(int& totalSteps, int& failures) {
+    int steps = 0;
+    int value;
+    bool success;
+
+    cout << "\nARRAY QUEUE" << endl;
+    ArrayQueue arrayQueue;
+    value = -1; // Failed removal must not change this value.
+    success = arrayQueue.dequeue(value);
+    checkRemove("dequeue", success, value, false, -1, steps, failures);
+    success = arrayQueue.enqueue(10);
+    checkInsert("enqueue 10", success, true, steps, failures);
+    success = arrayQueue.enqueue(20);
+    checkInsert("enqueue 20", success, true, steps, failures);
+    success = arrayQueue.enqueue(30);
+    checkInsert("enqueue 30", success, true, steps, failures);
+    success = arrayQueue.enqueue(40);
+    checkInsert("enqueue 40", success, true, steps, failures);
+    success = arrayQueue.enqueue(50);
+    checkInsert("enqueue 50", success, true, steps, failures);
+    success = arrayQueue.enqueue(99);
+    checkInsert("enqueue 99 while full", success, false, steps, failures);
+    success = arrayQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 10, steps, failures);
+    success = arrayQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 20, steps, failures);
+    success = arrayQueue.enqueue(60);
+    checkInsert("enqueue 60", success, true, steps, failures);
+    success = arrayQueue.enqueue(70);
+    checkInsert("enqueue 70", success, true, steps, failures);
+    success = arrayQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 30, steps, failures);
+    success = arrayQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 40, steps, failures);
+    success = arrayQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 50, steps, failures);
+    success = arrayQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 60, steps, failures);
+    success = arrayQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 70, steps, failures);
+    value = -1; // Failed removal must not change this value.
+    success = arrayQueue.dequeue(value);
+    checkRemove("dequeue", success, value, false, -1, steps, failures);
+    if (!arrayQueue.isEmpty() || arrayQueue.size() != 0) failures++;
+    cout << "Operations: " << steps << "; final size: " << arrayQueue.size() << endl;
+    totalSteps += steps;
+
+    cout << "\nLINKED QUEUE" << endl;
+    LinkedQueue linkedQueue;
+    steps = 0;
+    value = -1; // Failed removal must not change this value.
+    success = linkedQueue.dequeue(value);
+    checkRemove("dequeue", success, value, false, -1, steps, failures);
+    success = linkedQueue.enqueue(10);
+    checkInsert("enqueue 10", success, true, steps, failures);
+    success = linkedQueue.enqueue(20);
+    checkInsert("enqueue 20", success, true, steps, failures);
+    success = linkedQueue.enqueue(30);
+    checkInsert("enqueue 30", success, true, steps, failures);
+    success = linkedQueue.enqueue(40);
+    checkInsert("enqueue 40", success, true, steps, failures);
+    success = linkedQueue.enqueue(50);
+    checkInsert("enqueue 50", success, true, steps, failures);
+    success = linkedQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 10, steps, failures);
+    success = linkedQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 20, steps, failures);
+    success = linkedQueue.enqueue(60);
+    checkInsert("enqueue 60", success, true, steps, failures);
+    success = linkedQueue.enqueue(70);
+    checkInsert("enqueue 70", success, true, steps, failures);
+    success = linkedQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 30, steps, failures);
+    success = linkedQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 40, steps, failures);
+    success = linkedQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 50, steps, failures);
+    success = linkedQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 60, steps, failures);
+    success = linkedQueue.dequeue(value);
+    checkRemove("dequeue", success, value, true, 70, steps, failures);
+    value = -1; // Failed removal must not change this value.
+    success = linkedQueue.dequeue(value);
+    checkRemove("dequeue", success, value, false, -1, steps, failures);
+    if (!linkedQueue.isEmpty() || linkedQueue.size() != 0) failures++;
+    cout << "Operations: " << steps << "; final size: " << linkedQueue.size() << endl;
+    totalSteps += steps;
+}
+```
+
+### Deque.cpp
+
+```cpp
+#include "Assignment05.h"
+#include <iostream>
+
+using namespace std;
+
+const int DEQUE_CAPACITY = 5;
+
 class ArrayDeque {
 private:
-    static const int CAPACITY = 5;
-    int data[CAPACITY];
+    int data[DEQUE_CAPACITY];
     int front;
     int count;
 
 public:
-    ArrayDeque() : front(0), count(0) {}
+    ArrayDeque() {
+        front = 0;
+        count = 0;
+    }
 
     bool pushFront(int value) {
-        if (count == CAPACITY) return false;
-        front = (front + CAPACITY - 1) % CAPACITY;
+        if (count == DEQUE_CAPACITY) return false;
+        front = (front + DEQUE_CAPACITY - 1) % DEQUE_CAPACITY;
         data[front] = value;
-        ++count;
+        count++;
         return true;
     }
 
     bool pushBack(int value) {
-        if (count == CAPACITY) return false;
-        data[(front + count) % CAPACITY] = value;
-        ++count;
+        if (count == DEQUE_CAPACITY) return false;
+        int back = (front + count) % DEQUE_CAPACITY;
+        data[back] = value;
+        count++;
         return true;
     }
 
     bool popFront(int& value) {
-        if (isEmpty()) return false;
+        if (count == 0) return false;
         value = data[front];
-        front = (front + 1) % CAPACITY;
-        --count;
+        front = (front + 1) % DEQUE_CAPACITY;
+        count--;
         return true;
     }
 
     bool popBack(int& value) {
-        if (isEmpty()) return false;
-        value = data[(front + count - 1) % CAPACITY];
-        --count;
+        if (count == 0) return false;
+        int back = (front + count - 1) % DEQUE_CAPACITY;
+        value = data[back];
+        count--;
         return true;
     }
 
-    bool isEmpty() const { return count == 0; }
-    int size() const { return count; }
+    bool isEmpty() { return count == 0; }
+    int size() { return count; }
 };
 
 class LinkedDeque {
 private:
-    struct Node { int value; Node* previous; Node* next; };
+    struct Node {
+        int value;
+        Node* previous;
+        Node* next;
+    };
     Node* head;
     Node* tail;
     int count;
 
 public:
-    LinkedDeque() : head(nullptr), tail(nullptr), count(0) {}
-    LinkedDeque(const LinkedDeque&) = delete;
-    LinkedDeque& operator=(const LinkedDeque&) = delete;
+    LinkedDeque() {
+        head = nullptr;
+        tail = nullptr;
+        count = 0;
+    }
 
     bool pushFront(int value) {
-        Node* node = new Node{value, nullptr, head};
+        Node* node = new Node;
+        node->value = value;
+        node->previous = nullptr;
+        node->next = head;
         if (head == nullptr) tail = node;
         else head->previous = node;
         head = node;
-        ++count;
+        count++;
         return true;
     }
 
     bool pushBack(int value) {
-        Node* node = new Node{value, tail, nullptr};
+        Node* node = new Node;
+        node->value = value;
+        node->previous = tail;
+        node->next = nullptr;
         if (tail == nullptr) head = node;
         else tail->next = node;
         tail = node;
-        ++count;
+        count++;
         return true;
     }
 
     bool popFront(int& value) {
-        if (isEmpty()) return false;
+        if (head == nullptr) return false;
         Node* old = head;
         value = old->value;
-        head = old->next;
+        head = head->next;
         if (head == nullptr) tail = nullptr;
         else head->previous = nullptr;
         delete old;
-        --count;
+        count--;
         return true;
     }
 
     bool popBack(int& value) {
-        if (isEmpty()) return false;
+        if (tail == nullptr) return false;
         Node* old = tail;
         value = old->value;
-        tail = old->previous;
+        tail = tail->previous;
         if (tail == nullptr) head = nullptr;
         else tail->next = nullptr;
         delete old;
-        --count;
+        count--;
         return true;
     }
 
-    bool isEmpty() const { return head == nullptr; }
-    int size() const { return count; }
+    bool isEmpty() { return head == nullptr; }
+    int size() { return count; }
 
     ~LinkedDeque() {
         while (head != nullptr) {
@@ -278,160 +542,146 @@ public:
     }
 };
 
-void checkInsert(const string& action, bool actual, bool expected,
+void testDeques(int& totalSteps, int& failures) {
+    int steps = 0;
+    int value;
+    bool success;
+
+    cout << "\nARRAY DEQUE" << endl;
+    ArrayDeque arrayDeque;
+    value = -1; // Failed removal must not change this value.
+    success = arrayDeque.popFront(value);
+    checkRemove("popFront", success, value, false, -1, steps, failures);
+    success = arrayDeque.pushBack(10);
+    checkInsert("pushBack 10", success, true, steps, failures);
+    success = arrayDeque.pushFront(20);
+    checkInsert("pushFront 20", success, true, steps, failures);
+    success = arrayDeque.pushBack(30);
+    checkInsert("pushBack 30", success, true, steps, failures);
+    success = arrayDeque.popBack(value);
+    checkRemove("popBack", success, value, true, 30, steps, failures);
+    success = arrayDeque.pushFront(40);
+    checkInsert("pushFront 40", success, true, steps, failures);
+    success = arrayDeque.pushBack(50);
+    checkInsert("pushBack 50", success, true, steps, failures);
+    success = arrayDeque.popFront(value);
+    checkRemove("popFront", success, value, true, 40, steps, failures);
+    success = arrayDeque.pushBack(60);
+    checkInsert("pushBack 60", success, true, steps, failures);
+    success = arrayDeque.popBack(value);
+    checkRemove("popBack", success, value, true, 60, steps, failures);
+    success = arrayDeque.pushFront(70);
+    checkInsert("pushFront 70", success, true, steps, failures);
+    success = arrayDeque.pushBack(80);
+    checkInsert("pushBack 80", success, true, steps, failures);
+    success = arrayDeque.pushFront(99);
+    checkInsert("pushFront 99 while full", success, false, steps, failures);
+    success = arrayDeque.popBack(value);
+    checkRemove("popBack", success, value, true, 80, steps, failures);
+    success = arrayDeque.popFront(value);
+    checkRemove("popFront", success, value, true, 70, steps, failures);
+    success = arrayDeque.popFront(value);
+    checkRemove("popFront", success, value, true, 20, steps, failures);
+    success = arrayDeque.popBack(value);
+    checkRemove("popBack", success, value, true, 50, steps, failures);
+    success = arrayDeque.popBack(value);
+    checkRemove("popBack", success, value, true, 10, steps, failures);
+    value = -1; // Failed removal must not change this value.
+    success = arrayDeque.popBack(value);
+    checkRemove("popBack", success, value, false, -1, steps, failures);
+    if (!arrayDeque.isEmpty() || arrayDeque.size() != 0) failures++;
+    cout << "Operations: " << steps << "; final size: " << arrayDeque.size() << endl;
+    totalSteps += steps;
+
+    cout << "\nLINKED DEQUE" << endl;
+    LinkedDeque linkedDeque;
+    steps = 0;
+    value = -1; // Failed removal must not change this value.
+    success = linkedDeque.popFront(value);
+    checkRemove("popFront", success, value, false, -1, steps, failures);
+    success = linkedDeque.pushBack(10);
+    checkInsert("pushBack 10", success, true, steps, failures);
+    success = linkedDeque.pushFront(20);
+    checkInsert("pushFront 20", success, true, steps, failures);
+    success = linkedDeque.pushBack(30);
+    checkInsert("pushBack 30", success, true, steps, failures);
+    success = linkedDeque.popBack(value);
+    checkRemove("popBack", success, value, true, 30, steps, failures);
+    success = linkedDeque.pushFront(40);
+    checkInsert("pushFront 40", success, true, steps, failures);
+    success = linkedDeque.pushBack(50);
+    checkInsert("pushBack 50", success, true, steps, failures);
+    success = linkedDeque.popFront(value);
+    checkRemove("popFront", success, value, true, 40, steps, failures);
+    success = linkedDeque.pushBack(60);
+    checkInsert("pushBack 60", success, true, steps, failures);
+    success = linkedDeque.popBack(value);
+    checkRemove("popBack", success, value, true, 60, steps, failures);
+    success = linkedDeque.pushFront(70);
+    checkInsert("pushFront 70", success, true, steps, failures);
+    success = linkedDeque.popFront(value);
+    checkRemove("popFront", success, value, true, 70, steps, failures);
+    success = linkedDeque.popFront(value);
+    checkRemove("popFront", success, value, true, 20, steps, failures);
+    success = linkedDeque.popBack(value);
+    checkRemove("popBack", success, value, true, 50, steps, failures);
+    success = linkedDeque.popBack(value);
+    checkRemove("popBack", success, value, true, 10, steps, failures);
+    value = -1; // Failed removal must not change this value.
+    success = linkedDeque.popBack(value);
+    checkRemove("popBack", success, value, false, -1, steps, failures);
+    if (!linkedDeque.isEmpty() || linkedDeque.size() != 0) failures++;
+    cout << "Operations: " << steps << "; final size: " << linkedDeque.size() << endl;
+    totalSteps += steps;
+}
+```
+
+### main.cpp
+
+```cpp
+#include "Assignment05.h"
+#include <iostream>
+
+using namespace std;
+
+void checkInsert(string action, bool actual, bool expected,
                  int& steps, int& failures) {
-    ++steps;
-    bool pass = actual == expected;
-    if (!pass) ++failures;
-    cout << steps << ". " << action << " -> "
-         << (actual ? "success" : "rejected")
-         << " [" << (pass ? "PASS" : "FAIL") << "]\n";
+    steps++;
+    bool passed = (actual == expected);
+    if (!passed) failures++;
+
+    cout << steps << ". " << action << " -> ";
+    if (actual) cout << "success";
+    else cout << "rejected";
+    if (passed) cout << " [PASS]" << endl;
+    else cout << " [FAIL]" << endl;
 }
 
-void checkRemove(const string& action, bool actual, int value,
+void checkRemove(string action, bool actual, int value,
                  bool expected, int expectedValue, int& steps, int& failures) {
-    ++steps;
-    bool pass = actual == expected && value == expectedValue;
-    if (!pass) ++failures;
+    steps++;
+    bool passed = (actual == expected && value == expectedValue);
+    if (!passed) failures++;
+
     cout << steps << ". " << action << " -> ";
     if (actual) cout << value;
     else cout << "empty";
-    cout << " [" << (pass ? "PASS" : "FAIL") << "]\n";
-}
-
-template <typename Stack>
-void testStack(const string& name, Stack& stack, bool bounded,
-               int& totalSteps, int& failures) {
-    int steps = 0;
-    int value = -1;
-    auto pop = [&](bool expected, int expectedValue = 0) {
-        int before = value;
-        bool actual = stack.pop(value);
-        checkRemove("pop", actual, value, expected,
-                    expected ? expectedValue : before, steps, failures);
-    };
-    cout << "\n" << name << "\n";
-    pop(false);
-    checkInsert("push 10", stack.push(10), true, steps, failures);
-    checkInsert("push 20", stack.push(20), true, steps, failures);
-    checkInsert("push 30", stack.push(30), true, steps, failures);
-    pop(true, 30);
-    checkInsert("push 40", stack.push(40), true, steps, failures);
-    checkInsert("push 50", stack.push(50), true, steps, failures);
-    checkInsert("push 60", stack.push(60), true, steps, failures);
-    if (bounded)
-        checkInsert("push 99 while full", stack.push(99), false, steps, failures);
-    pop(true, 60);
-    pop(true, 50);
-    checkInsert("push 70", stack.push(70), true, steps, failures);
-    pop(true, 70);
-    pop(true, 40);
-    pop(true, 20);
-    pop(true, 10);
-    pop(false);
-    if (!stack.isEmpty() || stack.size() != 0) ++failures;
-    cout << "Operations: " << steps << "; final size: " << stack.size() << "\n";
-    totalSteps += steps;
-}
-
-template <typename Queue>
-void testQueue(const string& name, Queue& queue, bool bounded,
-               int& totalSteps, int& failures) {
-    int steps = 0;
-    int value = -1;
-    auto dequeue = [&](bool expected, int expectedValue = 0) {
-        int before = value;
-        bool actual = queue.dequeue(value);
-        checkRemove("dequeue", actual, value, expected,
-                    expected ? expectedValue : before, steps, failures);
-    };
-    cout << "\n" << name << "\n";
-    dequeue(false);
-    checkInsert("enqueue 10", queue.enqueue(10), true, steps, failures);
-    checkInsert("enqueue 20", queue.enqueue(20), true, steps, failures);
-    checkInsert("enqueue 30", queue.enqueue(30), true, steps, failures);
-    checkInsert("enqueue 40", queue.enqueue(40), true, steps, failures);
-    checkInsert("enqueue 50", queue.enqueue(50), true, steps, failures);
-    if (bounded)
-        checkInsert("enqueue 99 while full", queue.enqueue(99), false, steps, failures);
-    dequeue(true, 10);
-    dequeue(true, 20);
-    checkInsert("enqueue 60", queue.enqueue(60), true, steps, failures);
-    checkInsert("enqueue 70", queue.enqueue(70), true, steps, failures);
-    dequeue(true, 30);
-    dequeue(true, 40);
-    dequeue(true, 50);
-    dequeue(true, 60);
-    dequeue(true, 70);
-    dequeue(false);
-    if (!queue.isEmpty() || queue.size() != 0) ++failures;
-    cout << "Operations: " << steps << "; final size: " << queue.size() << "\n";
-    totalSteps += steps;
-}
-
-template <typename Deque>
-void testDeque(const string& name, Deque& deque, bool bounded,
-               int& totalSteps, int& failures) {
-    int steps = 0;
-    int value = -1;
-    auto popFront = [&](bool expected, int expectedValue = 0) {
-        int before = value;
-        bool actual = deque.popFront(value);
-        checkRemove("popFront", actual, value, expected,
-                    expected ? expectedValue : before, steps, failures);
-    };
-    auto popBack = [&](bool expected, int expectedValue = 0) {
-        int before = value;
-        bool actual = deque.popBack(value);
-        checkRemove("popBack", actual, value, expected,
-                    expected ? expectedValue : before, steps, failures);
-    };
-    cout << "\n" << name << "\n";
-    popFront(false);
-    checkInsert("pushBack 10", deque.pushBack(10), true, steps, failures);
-    checkInsert("pushFront 20", deque.pushFront(20), true, steps, failures);
-    checkInsert("pushBack 30", deque.pushBack(30), true, steps, failures);
-    popBack(true, 30);
-    checkInsert("pushFront 40", deque.pushFront(40), true, steps, failures);
-    checkInsert("pushBack 50", deque.pushBack(50), true, steps, failures);
-    popFront(true, 40);
-    checkInsert("pushBack 60", deque.pushBack(60), true, steps, failures);
-    popBack(true, 60);
-    checkInsert("pushFront 70", deque.pushFront(70), true, steps, failures);
-    if (bounded) {
-        checkInsert("pushBack 80", deque.pushBack(80), true, steps, failures);
-        checkInsert("pushFront 99 while full", deque.pushFront(99), false, steps, failures);
-        popBack(true, 80);
-    }
-    popFront(true, 70);
-    popFront(true, 20);
-    popBack(true, 50);
-    popBack(true, 10);
-    popBack(false);
-    if (!deque.isEmpty() || deque.size() != 0) ++failures;
-    cout << "Operations: " << steps << "; final size: " << deque.size() << "\n";
-    totalSteps += steps;
+    if (passed) cout << " [PASS]" << endl;
+    else cout << " [FAIL]" << endl;
 }
 
 int main() {
     int totalSteps = 0;
     int failures = 0;
-    ArrayStack arrayStack;
-    LinkedStack linkedStack;
-    ArrayQueue arrayQueue;
-    LinkedQueue linkedQueue;
-    ArrayDeque arrayDeque;
-    LinkedDeque linkedDeque;
 
-    testStack("ARRAY STACK", arrayStack, true, totalSteps, failures);
-    testStack("LINKED STACK", linkedStack, false, totalSteps, failures);
-    testQueue("ARRAY QUEUE", arrayQueue, true, totalSteps, failures);
-    testQueue("LINKED QUEUE", linkedQueue, false, totalSteps, failures);
-    testDeque("ARRAY DEQUE", arrayDeque, true, totalSteps, failures);
-    testDeque("LINKED DEQUE", linkedDeque, false, totalSteps, failures);
+    testStacks(totalSteps, failures);
+    testQueues(totalSteps, failures);
+    testDeques(totalSteps, failures);
 
     cout << "\nTOTAL: " << totalSteps << " operations; "
-         << failures << " failures\n";
-    return failures == 0 ? 0 : 1;
+         << failures << " failures" << endl;
+
+    if (failures == 0) return 0;
+    return 1;
 }
 ```
