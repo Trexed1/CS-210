@@ -1,19 +1,93 @@
 #ifndef ASSIGNMENT05_H
 #define ASSIGNMENT05_H
 
-#include <string>
+const int CAPACITY = 5;
 
-using namespace std;
+class ArrayStack {
+private:
+    int data[CAPACITY];
+    int count;
 
-// These functions print one operation and compare it with the expected result.
-void checkInsert(string action, bool actual, bool expected,
-                 int& steps, int& failures);
-void checkRemove(string action, bool actual, int value,
-                 bool expected, int expectedValue, int& steps, int& failures);
+public:
+    ArrayStack();
+    bool push(int value);
+    bool pop(int& value);
+};
 
-// Each function demonstrates the array and linked versions of one ADT.
-void testStacks(int& totalSteps, int& failures);
-void testQueues(int& totalSteps, int& failures);
-void testDeques(int& totalSteps, int& failures);
+class LinkedStack {
+private:
+    struct Node {
+        int value;
+        Node* next;
+    };
+    Node* head;
+
+public:
+    LinkedStack();
+    bool push(int value);
+    bool pop(int& value);
+    ~LinkedStack();
+};
+
+class ArrayQueue {
+private:
+    int data[CAPACITY];
+    int front;
+    int count;
+
+public:
+    ArrayQueue();
+    bool enqueue(int value);
+    bool dequeue(int& value);
+};
+
+class LinkedQueue {
+private:
+    struct Node {
+        int value;
+        Node* next;
+    };
+    Node* head;
+    Node* tail;
+
+public:
+    LinkedQueue();
+    bool enqueue(int value);
+    bool dequeue(int& value);
+    ~LinkedQueue();
+};
+
+class ArrayDeque {
+private:
+    int data[CAPACITY];
+    int front;
+    int count;
+
+public:
+    ArrayDeque();
+    bool pushFront(int value);
+    bool pushBack(int value);
+    bool popFront(int& value);
+    bool popBack(int& value);
+};
+
+class LinkedDeque {
+private:
+    struct Node {
+        int value;
+        Node* previous;
+        Node* next;
+    };
+    Node* head;
+    Node* tail;
+
+public:
+    LinkedDeque();
+    bool pushFront(int value);
+    bool pushBack(int value);
+    bool popFront(int& value);
+    bool popBack(int& value);
+    ~LinkedDeque();
+};
 
 #endif

@@ -3,43 +3,112 @@
 
 using namespace std;
 
-void checkInsert(string action, bool actual, bool expected,
-                 int& steps, int& failures) {
-    steps++;
-    bool passed = (actual == expected);
-    if (!passed) failures++;
-
-    cout << steps << ". " << action << " -> ";
-    if (actual) cout << "success";
-    else cout << "rejected";
-    if (passed) cout << " [PASS]" << endl;
-    else cout << " [FAIL]" << endl;
-}
-
-void checkRemove(string action, bool actual, int value,
-                 bool expected, int expectedValue, int& steps, int& failures) {
-    steps++;
-    bool passed = (actual == expected && value == expectedValue);
-    if (!passed) failures++;
-
-    cout << steps << ". " << action << " -> ";
-    if (actual) cout << value;
-    else cout << "empty";
-    if (passed) cout << " [PASS]" << endl;
-    else cout << " [FAIL]" << endl;
-}
-
 int main() {
-    int totalSteps = 0;
-    int failures = 0;
+    ArrayStack arrayStack;
+    LinkedStack linkedStack;
+    ArrayQueue arrayQueue;
+    LinkedQueue linkedQueue;
+    ArrayDeque arrayDeque;
+    LinkedDeque linkedDeque;
+    int arrayValue = 0;
+    int linkedValue = 0;
 
-    testStacks(totalSteps, failures);
-    testQueues(totalSteps, failures);
-    testDeques(totalSteps, failures);
+    // Stack: five pushes and five pops for each version.
+    arrayStack.push(10);
+    arrayStack.push(20);
+    arrayStack.push(30);
+    arrayStack.push(40);
+    arrayStack.push(50);
+    linkedStack.push(10);
+    linkedStack.push(20);
+    linkedStack.push(30);
+    linkedStack.push(40);
+    linkedStack.push(50);
 
-    cout << "\nTOTAL: " << totalSteps << " operations; "
-         << failures << " failures" << endl;
+    if (!arrayStack.push(60)) cout << "Array stack full" << endl;
+    cout << "Stack pops (array, linked):" << endl;
+    arrayStack.pop(arrayValue);
+    linkedStack.pop(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    arrayStack.pop(arrayValue);
+    linkedStack.pop(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    arrayStack.pop(arrayValue);
+    linkedStack.pop(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    arrayStack.pop(arrayValue);
+    linkedStack.pop(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    arrayStack.pop(arrayValue);
+    linkedStack.pop(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    if (!arrayStack.pop(arrayValue)) cout << "Array stack empty" << endl;
+    if (!linkedStack.pop(linkedValue)) cout << "Linked stack empty" << endl;
 
-    if (failures == 0) return 0;
-    return 1;
+    // Queue: five enqueues and five dequeues for each version.
+    arrayQueue.enqueue(10);
+    arrayQueue.enqueue(20);
+    arrayQueue.enqueue(30);
+    arrayQueue.enqueue(40);
+    arrayQueue.enqueue(50);
+    linkedQueue.enqueue(10);
+    linkedQueue.enqueue(20);
+    linkedQueue.enqueue(30);
+    linkedQueue.enqueue(40);
+    linkedQueue.enqueue(50);
+
+    if (!arrayQueue.enqueue(60)) cout << "Array queue full" << endl;
+    cout << "Queue dequeues (array, linked):" << endl;
+    arrayQueue.dequeue(arrayValue);
+    linkedQueue.dequeue(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    arrayQueue.dequeue(arrayValue);
+    linkedQueue.dequeue(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    arrayQueue.dequeue(arrayValue);
+    linkedQueue.dequeue(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    arrayQueue.dequeue(arrayValue);
+    linkedQueue.dequeue(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    arrayQueue.dequeue(arrayValue);
+    linkedQueue.dequeue(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    if (!arrayQueue.dequeue(arrayValue)) cout << "Array queue empty" << endl;
+    if (!linkedQueue.dequeue(linkedValue)) cout << "Linked queue empty" << endl;
+
+    // Deque: five insertions and five removals for each version.
+    arrayDeque.pushFront(10);
+    arrayDeque.pushFront(20);
+    arrayDeque.pushFront(30);
+    arrayDeque.pushBack(40);
+    arrayDeque.pushBack(50);
+    linkedDeque.pushFront(10);
+    linkedDeque.pushFront(20);
+    linkedDeque.pushFront(30);
+    linkedDeque.pushBack(40);
+    linkedDeque.pushBack(50);
+
+    if (!arrayDeque.pushBack(60)) cout << "Array deque full" << endl;
+    cout << "Deque popFront (array, linked):" << endl;
+    arrayDeque.popFront(arrayValue);
+    linkedDeque.popFront(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    arrayDeque.popFront(arrayValue);
+    linkedDeque.popFront(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    arrayDeque.popFront(arrayValue);
+    linkedDeque.popFront(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    cout << "Deque popBack (array, linked):" << endl;
+    arrayDeque.popBack(arrayValue);
+    linkedDeque.popBack(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    arrayDeque.popBack(arrayValue);
+    linkedDeque.popBack(linkedValue);
+    cout << arrayValue << ", " << linkedValue << endl;
+    if (!arrayDeque.popFront(arrayValue)) cout << "Array deque empty" << endl;
+    if (!linkedDeque.popBack(linkedValue)) cout << "Linked deque empty" << endl;
+
+    return 0;
 }
